@@ -20,7 +20,7 @@ APP_NAME = 'sample'
 
 HEALTH_PATH = 'health/report/'
 
-IGNORE_API = False
+IGNORE_API = True
 
 MF_USERNAME = os.environ.get("WEHA_API_USERNAME")
 
