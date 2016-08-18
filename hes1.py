@@ -7,11 +7,14 @@ import numpy
 import scipy
 import sys
 import json
+import datetime
+import pickle
+from collections import OrderedDict
+from utils import SweepRunInfor, OSConnectionParameter, OSConnectionProvider,HES1RunRecord,DBConnection,DBOperation
 
 class Nucleus(dolfin.SubDomain):
     def inside(self,x,on_boundary):
         return dolfin.between(x[0]**2+x[1]**2+x[2]**2,(0,3.**2))
-
 
 class hes1(pyurdme.URDMEModel):
     def __init__(self,model_name="hes1", P_start=200,m_start=10,k1_e=1.e9, k2_e=0.1, alpha_m_e=3.0, alpha_m_gamma_e=3./30., alpha_p_e=1.0, mu_m_e=0.015,mu_p_e=0.043):
@@ -235,19 +238,97 @@ def g2(result):
     
     return mapped
 
-if __name__ == "__main__":
-
-    # assume that the first and the second arguments are k1 and k2
-
-    if len(sys.argv) == 3:
-        k1_e = float(sys.argv[1])
-        k2_e = float(sys.argv[2])
-    else:
-        k1_e = 1e9
-        k2_e = 0.1
-        
+def run(k1_e,k2_e):
     os.chdir("/hes1simulation")
     model = hes1(model_name="hes1",k1_e=k1_e,k2_e=k2_e)
     result = model.run(report_level=0)
     mapped = g2(result)
-    print ("result:%s" % json.dumps(mapped))
+
+    return result,mapped
+
+def save(result,g2_result,sweep_record, bucket_conn,dbHes1,dbOpr):
+    assert isinstance(result, pyurdme.URDMEResult)
+    assert isinstance(bucket_conn, OSConnectionProvider)
+    assert isinstance(sweep_record, HES1RunRecord)
+    assert isinstance(dbHes1, DBOperation)
+    assert isinstance(dbOpr, DBOperation)
+
+    # add record to hes1DB
+    recHes1ID = dbHes1.insert(sweep_record.ToDict())
+
+    # add g2 record to dbOpr
+    g2Rec = OrderedDict()
+    g2Rec["ResultDbId"] = recHes1ID
+    g2Rec["ResultKey"] = sweep_record.Key
+    g2Rec["Data"] = g2_result
+    recG2ID = dbOpr.insert(g2Rec)
+
+    # write data
+    try:
+        data = pickle.dumps(result)
+        bucket_conn.Put(recHes1ID,data)
+    except Exception as e:
+        # role back record added 
+        dbHes1.delete_by_id(recHes1ID)
+        dbOpr.delete_by_id(recG2ID)
+
+        raise e
+
+    return recHes1ID,recG2ID
+
+if __name__ == "__main__":
+
+    # assume that the first is the input data
+    if len(sys.argv) != 2:
+        raise Exception("Invalid argument!")
+    
+    # parse configuration
+    sweepRun = SweepRunInfor()
+    sweepRun.fromInput(str(sys.argv[1]))
+
+    # validate parameters
+    if "k1_e" not in sweepRun.Parameters:
+        raise Exception("Missing k1_e argument")
+    if "k2_e" not in sweepRun.Parameters:
+        raise Exception("Missing k1_e argument")
+
+    # prepare db connection
+    dbConn = DBConnection(os.getenv("RESULT_DB_CONN_STRING"))
+    dbHes1 = dbConn.use(os.getenv("HES1_DB_NAME"))
+    dbOpr = dbConn.use(os.getenv("OPR_DB_NAME"))
+
+    # prepare bucket connection
+    connParam = OSConnectionParameter()
+    connParam.UserName = os.getenv("OBJ_STORE_USERNAME")
+    connParam.Password = os.getenv("OBJ_STORE_PASSWORD")
+    connParam.TenantName = os.getenv("OBJ_STORE_TENANT")
+    connParam.Url = os.getenv("OBJ_STORE_URL")
+    osConn = OSConnectionProvider()
+    osConn.Initialize(container=os.getenv("OBJ_STORE_NAME"),limit = 100 ,connParam = connParam)
+    
+    # assign value
+    k1_e = sweepRun.Parameters["k1_e"]
+    k2_e = sweepRun.Parameters["k2_e"]
+
+    #prepare record
+    hes1Record = HES1RunRecord.New(sweep_info)
+    
+  
+    errorMessage = ""
+    
+    # run the simulation
+    try:
+        hes1Record.StartDate = str(datetime.datetime.utcnow())        
+        result,mapped = run(k1_e=k1_e,k2_e=k2_e)
+        hes1Record.EndDate = str(datetime.datetime.utcnow())
+
+        # save data
+        recHes1ID,recG2ID = save(result,mapped,hes1Record,osConn,dbHes1,dbOpr)
+    except Exception as e:
+        raise e
+
+    resp = OrderedDict()
+    resp["ResultID"] = recHes1ID
+    resp["G2ID"] = recG2ID
+
+    print ("result:%s" % json.dumps(resp))

@@ -12,13 +12,11 @@ def _execute(command):
 
 class Hes1Wrapper (ServiceBase):
 
-    k1_e = 1e9
-    k2_e = 0.1
-
+    input = ""
 
     # service configuration
     
-    parameters = ['k1_e','k2_e']
+    parameters = ['input']
     is_single_instance = True
     address='hes1'
 
