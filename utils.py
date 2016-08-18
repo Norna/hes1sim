@@ -70,7 +70,7 @@ class DBOperation(object):
     def insert(self,record):
         assert isinstance(record,OrderedDict)
         resp = self._db[self._name].insert_one(record)
-        return resp.inserted_id
+        return str(resp.inserted_id)
 
     def delete(self,arg):
         resp = self._db[self._name].delete_many(arg)
@@ -163,7 +163,7 @@ class SweepRunInfor (object):
         data["Tag"] = self.Tag
 
         pItems = list()
-        for key,param in self.Parameters:
+        for key,param in self.Parameters.items():
             item = OrderedDict()
             item["Name"] = param.Name
             item["Value"] = param.Value

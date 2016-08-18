@@ -239,7 +239,7 @@ def g2(result):
     return mapped
 
 def run(k1_e,k2_e):
-    os.chdir("/hes1simulation")
+    os.chdir("/hes1sim")
     model = hes1(model_name="hes1",k1_e=k1_e,k2_e=k2_e)
     result = model.run(report_level=0)
     mapped = g2(result)
@@ -307,11 +307,11 @@ if __name__ == "__main__":
     osConn.Initialize(container=os.getenv("OBJ_STORE_NAME"),limit = 100 ,connParam = connParam)
     
     # assign value
-    k1_e = sweepRun.Parameters["k1_e"]
-    k2_e = sweepRun.Parameters["k2_e"]
+    k1_e = sweepRun.Parameters["k1_e"].Value
+    k2_e = sweepRun.Parameters["k2_e"].Value
 
     #prepare record
-    hes1Record = HES1RunRecord.New(sweep_info)
+    hes1Record = HES1RunRecord.New(sweepRun)
     
   
     errorMessage = ""
