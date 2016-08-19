@@ -145,6 +145,7 @@ class SweepRunInfor (object):
     Author = ""
     Descriptions = ""
     Tag = ""
+    EnsembleKey = ""
     Parameters = dict()
 
     def __init__(self):
@@ -161,6 +162,7 @@ class SweepRunInfor (object):
         data["Descriptions"] = self.Descriptions
         data["BatchKey"] = self.BatchKey
         data["Tag"] = self.Tag
+        data["EnsembleKey"] = self.EnsembleKey
 
         pItems = list()
         for key,param in self.Parameters.items():
@@ -185,13 +187,16 @@ class SweepRunInfor (object):
         if not "BatchKey" in data:
             raise Exception("Cannot find BatchKey in the input!")
         if not "Tag" in data:
-            raise Exception("Cannot find Tag in the input!")                        
+            raise Exception("Cannot find Tag in the input!")
+        if not "EnsembleKey" in data:
+            raise Exception("Cannot find EnsembleKey in the input!")                         
         
         self.Key = data["Key"]
         self.Author = data["Author"]
         self.Descriptions = data["Descriptions"]
         self.BatchKey = data["BatchKey"]
         self.Tag = data["Tag"]
+        self.EnsembleKey = data["EnsembleKey"]
 
         self.Parameters = dict()
         for parameter in data["Parameters"]:
@@ -215,21 +220,24 @@ class SweepRunBatchInfo (object):
     Author = ""
     Descriptions = ""
     Tag = ""
+    EnsembleSize=1
     CreatedDate = ""
     ParamterInfo = list()
 
-    def __init__(self,author,descriptions = "",tag = ""):
+    def __init__(self,author,descriptions = "",tag = "",ensembleSize=1):
         self.Key = str(uuid.uuid4())
         self.Author = author
         self.Tag = tag
         self.Descriptions = descriptions
         self.CreatedDate = datetime.datetime.utcnow()
-    def _getSweepRunInfor(self):
+        self.EnsembleSize = ensembleSize
+    def _getSweepRunInfor(self,ensembleKey):
         sr = SweepRunInfor()
         sr.BatchKey = self.Key
         sr.Author = self.Author
         sr.Descriptions = self.Descriptions
         sr.Tag = self.Tag
+        sr.EnsembleKey = ensembleKey
         sr.Parameters = dict()
 
         return sr
@@ -247,10 +255,12 @@ class SweepRunBatchInfo (object):
         coll = SweepRunInforCollection()
 
         for pd in prods:
-            sr = self._getSweepRunInfor()
-            for item in pd:
-                sr.AddParameter(item)
-            coll.append(sr)
+            ensembleKey = str(uuid.uuid4())
+            for i in range(0,self.EnsembleSize):
+                sr = self._getSweepRunInfor(ensembleKey)
+                for item in pd:
+                    sr.AddParameter(item)
+                coll.append(sr)
 
         return  coll 
 
@@ -260,6 +270,7 @@ class HES1RunRecord (object):
     Author = ""
     Descriptions = ""
     Tag = ""
+    EnsembleKey = ""
     Parameters = OrderedDict()
     StartDate = ""
     EndDate = ""
@@ -275,6 +286,7 @@ class HES1RunRecord (object):
         rec.Descriptions = runInfo.Descriptions
         rec.Tag = runInfo.Tag
         rec.Parameters = runInfo.Parameters
+        rec.EnsembleKey = runInfo.EnsembleKey
 
         return rec
 
@@ -285,6 +297,7 @@ class HES1RunRecord (object):
         data["Descriptions"] = self.Descriptions
         data["BatchKey"] = self.BatchKey
         data["Tag"] = self.Tag
+        data["EnsembleKey"] = self.EnsembleKey
         data["StartDate"] = self.StartDate
         data["EndDate"] = self.EndDate
 

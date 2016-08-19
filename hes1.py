@@ -260,6 +260,8 @@ def save(result,g2_result,sweep_record, bucket_conn,dbHes1,dbOpr):
     g2Rec = OrderedDict()
     g2Rec["ResultDbId"] = recHes1ID
     g2Rec["ResultKey"] = sweep_record.Key
+    g2Rec["EnsembleKey"] = sweep_record.EnsembleKey
+    g2Rec["BatchKey"] = sweep_record.BatchKey
     g2Rec["Data"] = g2_result
     recG2ID = dbOpr.insert(g2Rec)
 
