@@ -314,21 +314,22 @@ if __name__ == "__main__":
     hes1Record = HES1RunRecord.New(sweepRun)
     
   
-    errorMessage = ""
-    
+    output = ""
+
     # run the simulation
     try:
-        hes1Record.StartDate = str(datetime.datetime.utcnow())        
+        hes1Record.StartDate = str(datetime.datetime.utcnow())
         result,mapped = run(k1_e=k1_e,k2_e=k2_e)
         hes1Record.EndDate = str(datetime.datetime.utcnow())
 
         # save data
         recHes1ID,recG2ID = save(result,mapped,hes1Record,osConn,dbHes1,dbOpr)
+        resp = OrderedDict()
+        resp["ResultID"] = recHes1ID
+        resp["G2ID"] = recG2ID
+        output = json.dumps(resp)
     except Exception as e:
-        raise e
+        output = str(e)
 
-    resp = OrderedDict()
-    resp["ResultID"] = recHes1ID
-    resp["G2ID"] = recG2ID
+    print ("output:%s" % output)
 
-    print ("result:%s" % json.dumps(resp))

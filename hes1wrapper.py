@@ -26,7 +26,7 @@ class Hes1Wrapper (ServiceBase):
         
         output = ""
         try:
-            retcode,output,error = _execute("%s %s %s" % ("/usr/bin/python","/hes1simulation/hes1.py",self.input))
+            retcode,output,error = _execute("%s %s %s" % ("/usr/bin/python","/hes1sim/hes1.py",self.input))
         except Exception as e:
             output = str(e)
 
